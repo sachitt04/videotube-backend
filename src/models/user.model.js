@@ -27,10 +27,18 @@ const userSchema = new Schema(
         },
         avatar: {
             type: String, // cloudinary url
-            required: true,
+            default:"https://icon-library.com/images/no-profile-pic-icon/no-profile-pic-icon-12.jpg"
+        },
+        avatarPublicId:{
+            type:String,
+            default:null
         },
         coverImage: {
             type: String, // cloudinary url
+        },
+        coverImagePublicId:{
+            type:String,
+            default:null
         },
         watchHistory: [
             {
