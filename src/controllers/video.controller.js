@@ -66,11 +66,137 @@ const publishAVideo = asyncHandler(async (req, res) => {
     )
  
 })
-
 const getVideoById = asyncHandler(async (req, res) => {
     const { videoId } = req.params
     if(!videoId) throw new ApiError(400,"videoId not found")
-        
+        const video = await Video.aggregate([
+    {
+        $match:{
+            _id:new mongoose.Types.ObjectId(videoId)
+        }
+    },
+    { // getting likes
+        $lookup:{
+            from:"likes",
+            localField:"_id",
+            foreignField:"video",
+            as:"likesCount"
+        }
+    },
+    {
+        $addFields:{
+            likesCount:{
+                $size:"$likesCount"
+            }
+        }
+    },
+    {
+        isLiked:{
+            $cond:{
+                if:{
+                    $in:[req.user._id ,"$likesCount.likedBy"]},
+                    then:true,
+                    else:false
+                
+            }
+        }
+    } ,
+    { 
+        // getting videoOwner
+        $lookup:{
+            from:"user",
+            localField:"owner",
+            foreignField:"_id",
+            as:"owner",
+            pipeline:[{
+                 // now we have to get subsciber count
+                 $lookup:{
+                    from:"subscriptions",
+                    localField:"_id",
+                    foreignField:"channel",
+                    as:"subscribersCount"
+                 },
+            },
+            {
+                $addFields:{
+                    subscriberCount:{
+                        $size:"$subscribersCount"
+                    },
+
+                    isSubscribed:{
+
+                        $cond:{
+                            if:{
+                                $in:[req.user?._id, "$subscribersCount.subscriber"]},
+                                then:true,
+                                else:false
+                            
+                        }
+     
+                    }
+
+                },
+            },
+            {
+                $project:{
+                    fullName:1,
+                    username:1,
+                    subscriberCount:1,
+                    avatar:1,
+                    isSubscribed:1
+                }
+
+            }]
+        },
+    },
+    {
+        $lookup:{
+            from:"comments",
+            localField:"_id",
+            foreignField:"video",
+            as:"comments"
+        }
+
+    },
+    {
+        $project:{
+            "videoFile.url":1,
+            "thumbnail.url" :1,
+            title:1,
+            description:1,
+            duration:1,
+            likesCount:1,
+            comments:1,
+            createdAt:1,
+            views:1,
+            isLiked:1,
+            owner:1           
+        }
+    }
+ 
+    ])
+
+    if(!video) throw new ApiError(404,"video not found")
+
+        await video.findByIdAndUpdate(videoId,{
+            $inc:{
+                views:1
+            },
+            $addToset:{
+                watchHistory: videoId
+            }
+        })
+
+        return res
+        .status(200)
+        .json(
+            new ApiResponse(
+                200,
+                video[0],
+                "got video successfully"
+            )
+        )
+
 
     //TODO: get video by id
 })
@@ -153,6 +279,7 @@ const deleteVideo = asyncHandler(async (req, res) => {
 
 const togglePublishStatus = asyncHandler(async (req, res) => {
     const { videoId } = req.params
+
 })
 
 export {
