@@ -69,12 +69,23 @@ const publishAVideo = asyncHandler(async (req, res) => {
 
 const getVideoById = asyncHandler(async (req, res) => {
     const { videoId } = req.params
+    if(!videoId) throw new ApiError(400,"videoId not found")
+        
+
     //TODO: get video by id
 })
 
 const updateVideo = asyncHandler(async (req, res) => {
     const { videoId } = req.params
+
+    if(!videoId) throw new ApiError(400,"videoId not found")
+
    const video =  await Video.findById(videoId)
+
+   if(req.user?._id.toString()!== video.owner?._id.toString()){
+    throw new ApiError(400,"you're not the owner of this video")
+   }
+
     //TODO: update video details like title, description, thumbnail
     const {title,description} = req.body
     if(!title || !description){
@@ -112,8 +123,15 @@ const updateVideo = asyncHandler(async (req, res) => {
 
 const deleteVideo = asyncHandler(async (req, res) => {
     const { videoId } = req.params
+
+    if(!videoId) throw new ApiError(400,"video id not found")
+
     //TODO: delete video
     const video = await Video.findById(videoId)
+
+    if(req.user?._id.toString() !== video.owner?._id.toString()){
+        throw new ApiError (400,"you're not the owner of this video")
+    }
 
     // deleting video from cloudinary
     if(video.videoFilePublicId){
