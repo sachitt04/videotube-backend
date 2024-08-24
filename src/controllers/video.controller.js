@@ -113,6 +113,24 @@ const updateVideo = asyncHandler(async (req, res) => {
 const deleteVideo = asyncHandler(async (req, res) => {
     const { videoId } = req.params
     //TODO: delete video
+    const video = await Video.findById(videoId)
+
+    // deleting video from cloudinary
+    if(video.videoFilePublicId){
+        await cloudinary.uploader.destroy(video.videoFilePublicId)
+    }
+
+    await video.findbyIdandDelete(videoId)
+
+    return res
+    .status(200)
+    .json(
+        new ApiResponse(
+            200,
+            {},
+            "video deleted successfully"
+        )
+    )
 })
 
 const togglePublishStatus = asyncHandler(async (req, res) => {
