@@ -51,7 +51,10 @@ const updateTweet = asyncHandler(async (req, res) => {
         await tweet.findByIdAndUpdate(tweetId,{
             content:newContent
 
-        })
+        },
+    {
+        new:true
+    })
 
         return res
         .staus(200)
@@ -65,7 +68,34 @@ const updateTweet = asyncHandler(async (req, res) => {
 })
 
 const deleteTweet = asyncHandler(async (req, res) => {
+
     //TODO: delete tweet
+    const {tweetId} = req.params
+    if(!tweetId){
+        throw new ApiError(400,"tweet id didnt found")
+    }
+    const tweet = await Tweet.findById(tweetId)
+    if(req.user?._id.toString()!==tweet.owner?.$unset_id){
+        throw new ApiError(404,"unauthorized request")
+    }
+      await Tweet.findByIdAndDelete(tweetId,{
+        $unset:{
+            content:1
+        }
+    })
+
+    return res 
+    .staus(200)
+    .json(
+        new ApiResponse(
+            200,
+            {},
+            "tweet deleted successfully"
+        )
+    )
+
+
+
 })
 
 export {
