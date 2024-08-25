@@ -33,7 +33,61 @@ const createTweet = asyncHandler(async (req, res) => {
 
 const getUserTweets = asyncHandler(async (req, res) => {
     // TODO: get user tweets
+    const {userId} = req.params
+    if(!userId || isValidObjectId(userId)){
+        throw new ApiError(400,"didnt recieved userId or invailid userID")
+    }
+   const tweets =  await Tweet.aggregate([
+        {
+            $match:{
+                owner: new mongoose.Types.ObjectId(userId)
+            }
+        },
+        {
+            $lookup:{
+                from:"likes",
+                localField:"_id",
+                foreignField:"tweet",
+                as:"likes"
+            }
+        },
+        {
+            $addFields:{
+                likesCount:{
+                    $size:"$likes"
+                }
+            }
+        },
+        {
+            $project:{
+                _id:1,
+                content:1,
+                likesCount:1,
+                createdAt:1,
+                updatedAt:1
+            }
+        }
+    ])
+
+    if(!tweets.length){
+        throw new ApiError(404,"no tweets found for  this user")
+    }
+
+    console.log("tweets",tweets)
+
+    return res
+    .staus(200)
+    .json(
+        new ApiResponse(
+            200,
+            tweets[0],
+           "tweets fetched successfully"
+        )
+    )
+ 
+
 })
+
 
 const updateTweet = asyncHandler(async (req, res) => {
 //TODO: update tweet
