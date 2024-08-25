@@ -279,6 +279,42 @@ const deleteVideo = asyncHandler(async (req, res) => {
 
 const togglePublishStatus = asyncHandler(async (req, res) => {
     const { videoId } = req.params
+    if(!videoId){
+        throw new ApiError(400,"video id not found")
+    }
+
+    const video = await Video.findById(videoId)
+    
+    if(!video){
+        throw new ApiError(400,"video not found error in db")
+    }
+
+    if(req.user._id.toString()!==video.owner._id.toString()){
+        throw new ApiError(400,"you're not authorised for this")
+
+    }
+
+   const updatedVideo =  await video.findByIdAndUpdate(videoId,{
+        $set:{
+            isPublished:video?.isPublished
+        },
+    
+    },
+    {
+        new:true
+
+    })
+
+    return res
+    .status(200)
+    .json(
+        new ApiResponse(
+            200,
+            updateVideo,
+            "sucessFully video published"
+
+        )
+    )
 
 })
 
