@@ -160,14 +160,54 @@ const deletePlaylist = asyncHandler(async (req, res) => {
     if(req.user._id.toString() !== playlist.owner._id){
         throw new ApiError(404,"unauthorized requst")
     }
-    
 
+    await Playlist.findByIdAndDelete(playlistId)
+
+    return res 
+    .status(200)
+    .json(
+        new ApiResponse(
+            200,
+            {},
+            "plalist deleted successfully"
+        )
+    )
+ 
 })
 
 const updatePlaylist = asyncHandler(async (req, res) => {
     const {playlistId} = req.params
     const {name, description} = req.body
     //TODO: update playlist
+    if(!playlistId || !isValidObjectId(playlistId)){
+        throw new ApiError(400,"invalid playlistId")
+    }
+    if(!name){
+        throw new ApiError(400,"cant get any updated name")
+    }
+    const playlist = await Playlist.findById(playlistId)
+
+    if(playlist.owner_id.toString() !== req.user._id.toString()){
+        throw new ApiError(404,"unatuhorized request")
+    }
+
+ const updatedPlaylist = await Playlist.findByIdAndUpdate(playlist,{
+        name,
+        description:description || ""
+    },
+    {
+        new:true
+
+    })
+
+    return res
+    .status(200)
+    .json(new ApiResponse(
+        200,
+        updatePlaylist,
+        "playlist updated successfully"
+        
+    ))
 })
 
 export {
