@@ -6,6 +6,7 @@ import { Comment } from "../models/comment.model.js"
 import {ApiError} from "../utils/ApiError.js"
 import {ApiResponse} from "../utils/ApiResponse.js"
 import {asyncHandler} from "../utils/asyncHandler.js"
+import { json } from "express"
 
 const toggleVideoLike = asyncHandler(async (req, res) => {
     const {videoId} = req.params
@@ -75,10 +76,11 @@ const toggleVideoLike = asyncHandler(async (req, res) => {
     new ApiResponse(
         200,
         {
-            existingLikeStatus : !existingLikeStatus
+            existingLikeStatus : !existingLikeStatus,
+            likesCount:likesCount[0]
 
         },
-        likesCount[0],
+        
         "likes count fetched successfully"
     
  
@@ -132,14 +134,49 @@ const toggleCommentLike = asyncHandler(async (req, res) => {
 
         )
     )
-
 })
 
 const toggleTweetLike = asyncHandler(async (req, res) => {
     const {tweetId} = req.params
     //TODO: toggle like on tweet
-}
-)
+    if(!tweetId || !isValidObjectId(tweetId)){
+        throw new ApiError(400,"invalid tweetID")
+    }
+    // now we have tweet id
+    //  checking for existing like in tweet by the user
+    const existingLikeStatus = await Like.findOne({
+        tweet: new mongoose.Types.ObjectId(tweetId),
+        likedBy:new mongoose.Types.ObjectId(req.user?._id)
+    })
+
+    if(existingLikeStatus){
+        
+        const dislike = await Like.findByIdAndDelete(tweetId)
+        
+        if(!dislike){
+            throw new ApiError(500,"error while dislikng the tweet")
+        }
+    } else{
+        const like = await Like.create({
+            tweet: new mongoose.Types.ObjectId(tweetId),
+            likedBy: new mongoose.Types.ObjectId(req.user?._id)
+        })
+        if(!like){
+            throw new ApiError(500,"error while liking the tweet")
+        }
+    }
+
+    return res
+    .status(200)
+    .json(
+        new ApiResponse(
+            200,
+            {existingLikeStatus:!existingLikeStatus},
+            "tweet liked successfully"
+        )
+    )
+
+})
 
 const getLikedVideos = asyncHandler(async (req, res) => {
     //TODO: get all liked videos
