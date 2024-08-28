@@ -1,5 +1,8 @@
 import mongoose, {isValidObjectId} from "mongoose"
 import {Like} from "../models/like.model.js"
+import { Video } from "../models/video.model.js"
+import { Tweet } from "../models/tweet.model.js"
+import { Comment } from "../models/comment.model.js"
 import {ApiError} from "../utils/ApiError.js"
 import {ApiResponse} from "../utils/ApiResponse.js"
 import {asyncHandler} from "../utils/asyncHandler.js"
@@ -7,6 +10,81 @@ import {asyncHandler} from "../utils/asyncHandler.js"
 const toggleVideoLike = asyncHandler(async (req, res) => {
     const {videoId} = req.params
     //TODO: toggle like on video
+    if(!videoId || !isValidObjectId(videoId)){
+        throw new ApiError(400,"invalid id")
+    }
+
+    const video = await Video.findById(videoId)
+
+    // now we have videoID now we need to check for 
+    // checking if user had already liked the video
+  const  existingLikeStatus = await Like.findOne({
+    video: new mongoose.Types.ObjectId(videoId),
+    likedBy: new mongoose.Types.ObjectId(req.user?._id)    
+  })
+  if(existingLikeStatus){
+    const dislike = await Like.findByIdAndDelete(req.user?._id)
+    if(!dislike){
+        throw new ApiError(500,"failed to dislike")
+    }
+  }else{
+    const like = await Like.create({
+        videoId: new mongoose.Types.ObjectId(videoId),
+        likedBy: new mongoose.Types.ObjectId(req.user?._id)
+    })
+
+    if(!like){
+        throw new ApiError(500,"failed to like")
+    }
+  }
+
+  const likesCount = await Video.aggregate([
+    {
+        $match:{
+            _id: new mongoose.Types.ObjectId(videoId)
+        }
+
+    },
+    {
+        $lookup:{
+            from:"likes",
+            localField:"_id",
+            foreignField:"video",
+            as:"likesCount"
+        }
+    },
+    {
+        $addFields:{
+            likesCountOnVideo:{
+                $size:"$likesCount"
+            }
+        }
+    },
+    {
+        $project:{
+            likesCountOnVideo:1,
+        
+        }
+
+    }
+  ])
+
+  return res
+  .status(200)
+  .json(
+    new ApiResponse(
+        200,
+        {
+            existingLikeStatus : !existingLikeStatus
+
+        },
+        likesCount[0],
+        "likes count fetched successfully"
+    
+ 
+    )
+  )
+
 })
 
 const toggleCommentLike = asyncHandler(async (req, res) => {
