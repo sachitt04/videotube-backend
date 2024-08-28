@@ -90,6 +90,48 @@ const toggleVideoLike = asyncHandler(async (req, res) => {
 const toggleCommentLike = asyncHandler(async (req, res) => {
     const {commentId} = req.params
     //TODO: toggle like on comment
+    if(!commentId || !isValidObjectId(commentId)){
+        throw new ApiError(400,"invalid commentId")
+    }
+
+    // now we have comment id 
+    // checking for existinng like in comment
+    const existingLikeStaus = await Like.findOne({
+        Comment: new mongoose.Types.ObjectId(commentId),
+        likedBy: new mongoose.Types.ObjectId(req.user?._id)
+
+    })
+
+    if(existingLikeStaus){
+        const dislike = await Like.findByIdAndDelete(commentId)
+        if(!dislike){
+            throw new ApiError(500,"error while disliking the comment")
+        }
+
+    
+    } else{
+        const like  = await Like.create({
+            Comment: new mongoose.Types.ObjectId(commentId),
+            likedBy : new mongoose.Types.ObjectId(req.user?._id)
+        })
+
+        if(!like){
+            throw new ApiError(500,"error while liking the video")
+        }
+    }
+    
+    return res
+    .status(200)
+    .json(
+        new ApiResponse(
+            200,
+            {
+                existingLikeStaus:!existingLikeStaus
+            }
+            
+
+        )
+    )
 
 })
 
