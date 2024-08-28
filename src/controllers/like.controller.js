@@ -129,8 +129,7 @@ const toggleCommentLike = asyncHandler(async (req, res) => {
             200,
             {
                 existingLikeStaus:!existingLikeStaus
-            }
-            
+            }            
 
         )
     )
@@ -180,6 +179,73 @@ const toggleTweetLike = asyncHandler(async (req, res) => {
 
 const getLikedVideos = asyncHandler(async (req, res) => {
     //TODO: get all liked videos
+    const likedVideos = await Like.aggregate([
+        {
+            $match:{
+                likedBy: new mongoose.Types.ObjectId(req.user?._id)
+            }
+        },
+        {
+            $lookup:{
+                // for liked videos 
+                from:"videos",
+                localField:"video",
+                foreignField:"_id",
+                as:"video"
+            }
+        },
+        {
+            $unwind:"$video"
+        },
+        {
+            $project:{
+                video:1
+            }
+        },
+        {
+            $lookup:{
+                from:"users",
+                localField:"video.owner",
+                foreignField:"_id",
+                as:"owner"
+            }
+        },
+        {
+            $unwind:"$owner"
+        },
+        {
+            $project:{
+                _id:1,
+                "owner.username":1,
+                "owner.name":1,
+                "owner._id":1,
+                "owner.avatar.url":1,
+                "video.videoFile.url":1,
+                "video.thumbnail.url":1,
+                "video.views":1,
+                "video.createdAt":1,
+                "video.title":1,
+                "video.duration":1 
+            }
+        }
+
+    ])
+
+    if(!likedVideos.length){
+        throw new ApiError(400,"ERROR: liked videos not found")
+    }
+
+    return res
+    .status(200)
+    .json(
+        new ApiResponse(
+            200,
+            {
+                likedVideos
+            },
+            "liked videos fetched successfully"
+        )
+    ) 
 })
 
 export {
