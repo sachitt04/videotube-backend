@@ -39,14 +39,70 @@ const addComment = asyncHandler(async (req, res) => {
 
 const updateComment = asyncHandler(async (req, res) => {
     // TODO: update a comment
+    const {commentId} = req.params
     const {newComment} = req.body
+
+    if(!commentId || !isValidObjectId(commentId)){
+        throw new ApiError(400,"invalid commentId")
+    }
+    
     if(!newComment){
         throw new ApiError(400,"new comment not found")
     }
+
+    // now cheking for if current user is the owner of the comment or not
+    const comment = await Comment.findById(commentId)
+    if(req.user?._id !== comment.owner._id){
+        throw new ApiError(404,"unathorized request")
+    }
+
+    const updatedComment = await Comment.findByIdAndUpdate(commentId,{
+        comment:newComment
+    },
+{
+    new:true
+})
+
+return res
+.status(200)
+.json(
+    new ApiResponse(
+        200,
+        {updatedComment},
+        "comment updated successfully"
+    )
+)
+
+
+    
 })
 
 const deleteComment = asyncHandler(async (req, res) => {
     // TODO: delete a comment
+    const {commentId} = req.params
+    if(!commentId || !isValidObjectId(commentId)){
+        throw new ApiError(400,"invalid commentId")
+    }
+
+    const comment = await Comment.findById(commentId)
+    if(req.user?._id !== comment.owner._id){
+        throw  new ApiError(404,"unauthorized request")
+    }
+
+    await Comment.findByIdAndDelete(commentId)
+
+    return res 
+    .status(200)
+    .json(
+        new ApiResponse(
+            200,
+            {},
+            "comment deleted successfully"
+        )
+    )
+
+
+
 })
 
 export {
